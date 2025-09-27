@@ -1,0 +1,156 @@
+body{
+    cursor: none; /* Hide default cursor */
+    height: 100%;
+    width: 100%;
+}
+.bgvid2{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover; /* makes video fill without distortion */
+    z-index: -1;
+}
+
+.navigationbar{
+    font-family: "poppins", sans-serif;
+    color: aqua; /* if the mouse hover */
+    z-index: 1000; /* Ensure it stays on top of other content */
+    position: sticky;
+    top: 0;
+}
+
+.sectiontwo{
+    height: 100vh;
+    width: 100vw;
+    background-color: rgb(8, 0, 39);
+    margin-top: 35px ;
+}
+
+.count-container {
+    display: flex;
+    padding: 20px;
+    border: 3px solid #000000;
+    border-radius: 8px;
+    background-color: #2c035c;
+    box-shadow: 0 60px  64px  rgb(0, 81, 255);
+    width: 8cm;
+    height: 8cm;
+    position: relative;
+    left: 25cm;
+    top: 4cm;
+    
+}
+
+.count-number {
+    font-size: 11em; /* Adjust size as needed */
+    font-weight: bold;
+    color: #ffffff;
+    position: relative;
+    bottom: 0.3cm;
+    left: 0.5cm;
+}
+
+.our{
+    color: aqua;
+    font-family: "Bungee",sans-serif;
+    position: relative;
+    right: 2cm;
+}
+
+.cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: screen; /* Blend colors for fluid-like effect */
+      transition: transform 0.1s ease-out, opacity 0.3s ease-out;
+      will-change: transform, opacity;
+    }
+    .splat {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      mix-blend-mode: screen;
+      transition: transform 0.5s ease-out, opacity 0.7s ease-out;
+      will-change: transform, opacity;
+    }
+    /* Animation for splash effect */
+    @keyframes splat {
+      0% {
+        transform: scale(0.1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(2.5);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    .hackpng{
+        height: 15.66cm;
+        width: 8cm;
+        border-radius: 40px;
+        border: aqua solid 5px;
+        position: relative;
+        left: 1cm;
+        bottom: 0.05cm;
+      
+    }
+
+    .hackpngdiv{
+        height: 15.66cm;
+        width: 10cm;
+        background-color: rgba(0, 81, 255, 0.274);
+        border: rgb(0, 0, 0) solid 2px;
+        position: relative;
+        left: 14cm;
+        bottom: -0.30cm;
+        box-shadow: 0 300px 800px 100px  #2c035c;
+    }
+
+    .spanus{
+      color: aqua;
+      font-family: "bungee",sans-serif;
+      position: relative;
+      bottom: -0.8cm;
+      right: 2cm;
+    }
+    
+.dinamic{
+  height: 1cm;
+  width: 8cm;
+  position: relative;
+  left: 15cm;
+  top: -6.7cm;
+  z-index: 900;
+}
+ 
+.time{  
+  height: 8vh;
+  width: 17vw;
+  position: relative;
+  left: 16cm;
+  top: -11.3cm;
+  z-index: 900;
+}
+
+.timeblur{
+  height: 5cm;
+  width: 6cm;
+  backdrop-filter: blur(2px);
+  background-color: rgba(red, green, blue, alpha);
+  border-radius: 30px;
+  position: relative;
+  left: 16.2cm;
+  z-index: 800;
+  top: -6.5cm;
+}

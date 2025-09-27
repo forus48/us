@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="n.jpg" type="image/x-icon">
+    <title>NAFI</title>
+    <!-- Tailwind CSS CDN for responsive utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+     <!-- Google Fonts for the 'Poppins' font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+</head>
+<body>
+
+</head>
+<body>
+  <div class="cursor" id="cursor"></div>
+  <script>
+    const cursor = document.getElementById('cursor');
+
+    // Configuration matching original parameters
+    const config = {
+      SIM_RESOLUTION: 128,
+      DYE_RESOLUTION: 1440,
+      CAPTURE_RESOLUTION: 512,
+      DENSITY_DISSIPATION: 3.5,
+      VELOCITY_DISSIPATION: 2,
+      PRESSURE: 0.1,
+      PRESSURE_ITERATIONS: 20,
+      CURL: 3,
+      SPLAT_RADIUS: 0.2,
+      SPLAT_FORCE: 6000,
+      SHADING: true,
+      COLOR_UPDATE_SPEED: 10,
+      BACK_COLOR: { r: 0.5, g: 0, b: 0 },
+      TRANSPARENT: true
+    };
+
+    function pointerPrototype() {
+      this.id = -1;
+      this.texcoordX = 0;
+      this.texcoordY = 0;
+      this.prevTexcoordX = 0;
+      this.prevTexcoordY = 0;
+      this.deltaX = 0;
+      this.deltaY = 0;
+      this.down = false;
+      this.moved = false;
+      this.color = generateColor();
+    }
+
+    let pointers = [new pointerPrototype()];
+    let lastUpdateTime = Date.now();
+    let colorUpdateTimer = 0.0;
+
+    function generateColor() {
+      let c = HSVtoRGB(Math.random(), 1.0, 1.0);
+      c.r *= 0.15;
+      c.g *= 0.15;
+      c.b *= 0.15;
+      return `rgb(${Math.floor(c.r * 255)}, ${Math.floor(c.g * 255)}, ${Math.floor(c.b * 255)})`;
+    }
+
+    function HSVtoRGB(h, s, v) {
+      let r, g, b, i, f, p, q, t;
+      i = Math.floor(h * 6);
+      f = h * 6 - i;
+      p = v * (1 - s);
+      q = v * (1 - f * s);
+      t = v * (1 - (1 - f) * s);
+      switch (i % 6) {
+        case 0: r = v; g = t; b = p; break;
+        case 1: r = q; g = v; b = p; break;
+        case 2: r = p; g = v; b = t; break;
+        case 3: r = p; g = q; b = v; break;
+        case 4: r = t; g = p; b = v; break;
+        case 5: r = v; g = p; b = q; break;
+      }
+      return { r, g, b };
+    }
+
+    function updateColors(dt) {
+      colorUpdateTimer += dt * config.COLOR_UPDATE_SPEED;
+      if (colorUpdateTimer >= 1) {
+        colorUpdateTimer = wrap(colorUpdateTimer, 0, 1);
+        pointers.forEach(p => {
+          p.color = generateColor();
+        });
+        cursor.style.backgroundColor = pointers[0].color;
+      }
+    }
+
+    function wrap(value, min, max) {
+      const range = max - min;
+      if (range === 0) return min;
+      return ((value - min) % range) + min;
+    }
+
+    function updatePointerDownData(pointer, id, posX, posY) {
+      pointer.id = id;
+      pointer.down = true;
+      pointer.moved = false;
+      pointer.texcoordX = posX / window.innerWidth;
+      pointer.texcoordY = 1.0 - posY / window.innerHeight;
+      pointer.prevTexcoordX = pointer.texcoordX;
+      pointer.prevTexcoordY = pointer.texcoordY;
+      pointer.deltaX = 0;
+      pointer.deltaY = 0;
+      pointer.color = generateColor();
+    }
+
+    function updatePointerMoveData(pointer, posX, posY) {
+      pointer.prevTexcoordX = pointer.texcoordX;
+      pointer.prevTexcoordY = pointer.texcoordY;
+      pointer.texcoordX = posX / window.innerWidth;
+      pointer.texcoordY = 1.0 - posY / window.innerHeight;
+      pointer.deltaX = correctDeltaX(pointer.texcoordX - pointer.prevTexcoordX);
+      pointer.deltaY = correctDeltaY(pointer.texcoordY - pointer.prevTexcoordY);
+      pointer.moved = Math.abs(pointer.deltaX) > 0 || Math.abs(pointer.deltaY) > 0;
+    }
+
+    function updatePointerUpData(pointer) {
+      pointer.down = false;
+    }
+
+    function correctDeltaX(delta) {
+      let aspectRatio = window.innerWidth / window.innerHeight;
+      if (aspectRatio < 1) delta *= aspectRatio;
+      return delta;
+    }
+
+    function correctDeltaY(delta) {
+      let aspectRatio = window.innerWidth / window.innerHeight;
+      if (aspectRatio > 1) delta /= aspectRatio;
+      return delta;
+    }
+
+    function correctRadius(radius) {
+      let aspectRatio = window.innerWidth / window.innerHeight;
+      if (aspectRatio > 1) radius *= aspectRatio;
+      return radius;
+    }
+
+    function splat(x, y, dx, dy, color) {
+      // Create multiple splat elements to mimic fluid burst
+      for (let i = 0; i < 3; i++) {
+        const splat = document.createElement('div');
+        splat.className = 'splat';
+        splat.style.backgroundColor = color;
+        const radius = correctRadius(config.SPLAT_RADIUS * 100) * (1 + Math.random() * 0.5);
+        splat.style.width = `${radius}px`;
+        splat.style.height = `${radius}px`;
+        const offsetX = dx * config.SPLAT_FORCE * 0.0001 * (Math.random() - 0.5);
+        const offsetY = dy * config.SPLAT_FORCE * 0.0001 * (Math.random() - 0.5);
+        splat.style.left = `${x + offsetX}px`;
+        splat.style.top = `${y + offsetY}px`;
+        splat.style.transform = `translate(-50%, -50%) scale(0.1)`;
+        splat.style.opacity = '0.8';
+        splat.style.animation = `splat ${0.5 + Math.random() * 0.2}s ease-out`;
+        document.body.appendChild(splat);
+        setTimeout(() => {
+          splat.remove();
+        }, 700); // Match animation duration
+      }
+    }
+
+    function splatPointer(pointer) {
+      const dx = pointer.deltaX * config.SPLAT_FORCE;
+      const dy = pointer.deltaY * config.SPLAT_FORCE;
+      const x = pointer.texcoordX * window.innerWidth;
+      const y = (1.0 - pointer.texcoordY) * window.innerHeight;
+      splat(x, y, dx, dy, pointer.color);
+    }
+
+    function clickSplat(pointer) {
+      const color = generateColor();
+      color.r *= 10.0;
+      color.g *= 10.0;
+      color.b *= 10.0;
+      const rgbColor = `rgb(${Math.floor(color.r * 255)}, ${Math.floor(color.g * 255)}, ${Math.floor(color.b * 255)})`;
+      const x = pointer.texcoordX * window.innerWidth;
+      const y = (1.0 - pointer.texcoordY) * window.innerHeight;
+      const dx = 10 * (Math.random() - 0.5);
+      const dy = 30 * (Math.random() - 0.5);
+      splat(x, y, dx, dy, rgbColor);
+    }
+
+    function updateFrame() {
+      const now = Date.now();
+      const dt = (now - lastUpdateTime) / 1000;
+      lastUpdateTime = now;
+      updateColors(dt);
+      pointers.forEach(p => {
+        if (p.moved) {
+          splatPointer(p);
+          p.moved = false;
+        }
+      });
+      requestAnimationFrame(updateFrame);
+    }
+
+    window.addEventListener('mousedown', e => {
+      const pointer = pointers[0];
+      const posX = e.clientX;
+      const posY = e.clientY;
+      updatePointerDownData(pointer, -1, posX, posY);
+      clickSplat(pointer);
+    });
+
+    window.addEventListener('mousemove', e => {
+      const pointer = pointers[0];
+      const posX = e.clientX;
+      const posY = e.clientY;
+      updatePointerMoveData(pointer, posX, posY);
+      cursor.style.transform = `translate(${posX}px, ${posY}px)`;
+      cursor.style.width = `${correctRadius(config.SPLAT_RADIUS * 100)}px`;
+      cursor.style.height = `${correctRadius(config.SPLAT_RADIUS * 100)}px`;
+    });
+
+    window.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const touches = e.targetTouches;
+      const pointer = pointers[0];
+      for (let i = 0; i < touches.length; i++) {
+        const posX = touches[i].clientX;
+        const posY = touches[i].clientY;
+        updatePointerDownData(pointer, touches[i].identifier, posX, posY);
+        clickSplat(pointer);
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const touches = e.targetTouches;
+      const pointer = pointers[0];
+      for (let i = 0; i < touches.length; i++) {
+        const posX = touches[i].clientX;
+        const posY = touches[i].clientY;
+        updatePointerMoveData(pointer, posX, posY);
+        cursor.style.transform = `translate(${posX}px, ${posY}px)`;
+        cursor.style.width = `${correctRadius(config.SPLAT_RADIUS * 100)}px`;
+        cursor.style.height = `${correctRadius(config.SPLAT_RADIUS * 100)}px`;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', e => {
+      const touches = e.changedTouches;
+      const pointer = pointers[0];
+      for (let i = 0; i < touches.length; i++) {
+        updatePointerUpData(pointer);
+      }
+    });
+
+    updateFrame();
+  </script>
+
+
+
+    <!-- bg video -->
+    <video autoplay loop muted class="bgvid2">
+        <source src="bgvid2.mp4" type="video/mp4">
+    </video>
+   <nav class=
+   " w-[15cm] h-20 mt-4 px-4 sm:px-8
+    flex justify-between items-center
+    backdrop-blur-md bg-white/10
+    border border-white/10
+    rounded-full
+    max-w-7xl mx-auto
+    shadow-lg">
+    <div class="navdiv">
+        <ul class="flex-grow flex justify-center items-center gap-4 ml-[2cm] sm:gap-10">
+               <!-- navigation bar -->
+            <a href="./index.html" class="text-black hover:text-yellow-400 font-medium text-[20px] transition-colors" >Home</a>
+            <a href="#aboutus" class="text-black hover:text-yellow-400 font-medium text-[20px] transition-colors" >About</a>
+            <a href="#" class="text-black hover:text-yellow-400 font-medium text-[20px] transition-colors" >Skill</a>
+            <a href="#" class="text-black hover:text-yellow-400 font-medium text-[20px] transition-colors" >Contact</a>
+        </ul>
+    </div>
+</nav>
+
+
+<div class="h-[2cm] w-[2cm] mr-[372px] mt-[-2cm] backdrop-blur-md bg-black/40 border border-white/10 rounded-full max-w-7xl mx-auto shadow-lg  "> </div>  
+<div class="h-[2cm] w-[2cm] mr-[920px] mt-[-2cm] backdrop-blur-md bg-black/40 border border-white/10 rounded-full max-w-7xl mx-auto shadow-lg  ">   </div>
+
+
+
+
+
+<style>
+.text-type {
+      display: inline-block;
+      white-space: pre-wrap;
+      font: bold;
+      font-size: 80px;
+      font-family: "Bungee",sans-serif;
+      position: relative;
+      color: aqua;
+    }
+
+    .text-type__cursor {
+      margin-left: 0.25rem;
+      display: inline-block;
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="text-type">
+    <span id="text"></span>
+    <span class="text-type__cursor"></span>
+  </div>
+
+  <script>
+    const texts = ["Hello Guys!", "Name Of Us?", "Is Nafi | Dhakir", "We Like To Play","We are Students"];
+    const typingSpeed = 100;   // ms per character
+    const deletingSpeed = 50;  // ms per character delete
+    const pauseDuration = 1500; // pause before deleting
+    let textIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+
+    const textElement = document.getElementById("text");
+
+    function typeEffect() {
+      const currentText = texts[textIndex];
+
+      if (isDeleting) {
+        textElement.textContent = currentText.substring(0, charIndex--);
+        if (charIndex < 0) {
+          isDeleting = false;
+          textIndex = (textIndex + 1) % texts.length;
+          setTimeout(typeEffect, typingSpeed);
+          return;
+        }
+      } else {
+        textElement.textContent = currentText.substring(0, charIndex++);
+        if (charIndex > currentText.length) {
+          isDeleting = true;
+          setTimeout(typeEffect, pauseDuration);
+          return;
+        }
+      }
+
+      setTimeout(typeEffect, isDeleting ? deletingSpeed : typingSpeed);
+    }
+
+    // Start typing
+    typeEffect();
+  </script>
+
+
+
+
+<!------- section two ------->
+
+<div class="sectiontwo" id="aboutus">
+<div class="count-container">
+        <span id="count-up" class="count-number">0</span>
+    </div>
+    <script>
+      // Configuration for the count-up effect
+const CONFIG = {
+    targetId: 'count-up',
+    to: 13, // The final number to count to
+    from: 0, // The first number to count from
+    duration: 4000, // Duration in milliseconds (2 seconds)
+    delay: 500, // Delay before starting in milliseconds (0.5 seconds)
+    separator: ',', // Use a comma for thousands separation
+};
+
+/**
+ * Formats a number with the specified number of decimal places and a separator.
+ * @param {number} number The number to format.
+ * @param {string} separator The thousands separator (e.g., ',').
+ * @param {number} decimals The number of decimal places.
+ * @returns {string} The formatted number string.
+ */
+function formatNumber(number, separator, decimals) {
+    const options = {
+        useGrouping: !!separator,
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    };
+
+    // Use 'en-US' locale for standard formatting
+    const formatted = new Intl.NumberFormat('en-US', options).format(number);
+
+    // Replace default comma separator with the custom one if provided
+    return separator ? formatted.replace(/,/g, separator) : formatted;
+}
+
+/**
+ * Animates the counting effect.
+ * @param {HTMLElement} element The DOM element to update.
+ * @param {number} start The starting number.
+ * @param {number} end The final number.
+ * @param {number} duration The animation duration in ms.
+ * @param {string} separator The thousands separator.
+ */
+function animateCount(element, start, end, duration, separator) {
+  let startTime;
+    // Determine decimal places from the start/d values
+    const getDecimalPlaces = (num) => (num.toString().includes('.') ? num.toString().split('.')[1].length : 0);
+    const maxDecimals = Math.max(getDecimalPlaces(start), getDecimalPlaces(end));
+
+    function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+
+        // Calculate the current value using a simple linear interpolation
+        const progress = Math.min(elapsed / duration, 1);
+        const currentValue = start + (end - start) * progress;
+
+        // Round to the max decimal places
+        const roundedValue = parseFloat(currentValue.toFixed(maxDecimals));
+
+        // Update the element's text content with the formatted number
+        element.textContent = formatNumber(roundedValue, separator, maxDecimals);
+
+        // Continue the animation if not finished
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        }
+    }
+
+    requestAnimationFrame(step);
+}
+
+/**
+ * Sets up the Intersection Observer to start the count when the element is in view.
+ */
+function setupCountUp() {
+    const { targetId, from, to, duration, delay, separator } = CONFIG;
+    const countElement = document.getElementById(targetId);
+
+    if (!countElement) return;
+
+    // Set initial value
+    countElement.textContent = formatNumber(from, separator, 0);
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                // Element is in view, disconnect observer to run only once
+                observer.unobserve(entry.target);
+
+                // Start the count after the specified delay
+                setTimeout(() => {
+                    animateCount(entry.target, from, to, duration, separator);
+                }, delay);
+            }
+        });
+    }, {
+        threshold: 0.1 // Trigger when 10% of the element is visible
+    });
+
+    // Start observing the element
+    observer.observe(countElement);
+}
+
+// Run the setup when the document is fully loaded
+document.addEventListener('DOMContentLoaded', setupCountUp);
+    </script>
+
+<div class="dinamic">
+  <img src="dinamic.png" >
+</div>
+
+<div class="timeblur"></div>
+
+<div class="time">
+  <img src="time.png">
+</div>
+
+<h3 class="ml-[28.6cm] mt-[-12.6cm] text-[1cm]">
+  <span class="our">Our Age</span> 
+</h3>
+ 
+<div class="mt-[-4.3cm] h-2 w-100vw bg-white"></div>
+
+<div class="hackpngdiv">  
+  <img src="hack.png" class="hackpng">
+</div>
+
+<h3 class="ml-[4.6cm] mt-[-13.2cm] text-[35px] text-white">About 
+  <span class="spanus">US</span></h3>
+
+<div class="h-[2px] w-[5cm] mt-[0.6cm] ml-[3.7cm] bg-[aqua]"></div>
+
+<div class="mt-[1cm]">
+<p class="text-[aqua] ml-[4.5cm]">Lorem ipsum dolor</p>
+<br ><p class="text-[aqua] ml-[3.4cm]"> sit amet consectetur adipisicing</p>
+<br > <p class="text-[aqua] ml-[2.5cm]">elit. Amet officia error omnis repellendus</p>
+<br ><p class="text-[aqua] ml-[1.4cm]">eum velit! Mollitia tempora rerum delectus fuga vero,</p>
+<br > <p class="text-[aqua] ml-[0.8cm]">porro in dolore accusantium laboriosam quibusdam maxime.</p>  
+</div>
+
+</div>  <!------- last of section two ------->
+
+</body>
+</html>
